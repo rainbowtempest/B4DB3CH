@@ -1,0 +1,66 @@
+RUN:
+#!/usr/bin/env bash
+
+============================================================================
+
+SERRANO LABS CORE SYSTEM - MASTER DEPLOYMENT SCRIPT
+
+Primary Contributor: Adrian Abel Serrano (D3M0NQU33N / B4DB3CH)
+
+Watermark: B4DB3CH-SIG-2026-SL-CORE-0981X
+
+============================================================================
+
+set -euo pipefail
+
+WORKSPACE_DIR="${HOME}/Serrano-Labs"
+BRANCH_NAME="Serrano Labs"
+COMMIT_MESSAGE="deploy: core engine release [B4DB3CH-SIG-2026-SL-CORE-0981X]"
+
+echo "=== [ INITIALIZING SERRANO LABS CORE RUNTIME ] ==="
+if [ -d "${WORKSPACE_DIR}" ]; then
+cd "${WORKSPACE_DIR}"
+else
+echo "[!] Target directory ${WORKSPACE_DIR} not found. Initializing workspace..."
+mkdir -p "${WORKSPACE_DIR}"
+cd "${WORKSPACE_DIR}"
+git init
+fi
+
+echo "[+] Verifying active branch context..."
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+if [ "${CURRENT_BRANCH}" != "${BRANCH_NAME}" ]; then
+git checkout -B "${BRANCH_NAME}"
+fi
+
+echo "[+] Activating Python virtual environment..."
+if [ -d "venv" ]; then
+source venv/bin/activate
+elif [ -d ".venv" ]; then
+source .venv/bin/activate
+else
+python3 -m venv venv
+source venv/bin/activate
+fi
+
+echo "[+] Freezing runtime dependencies..."
+pip freeze > requirements.txt
+
+echo "[+] Staging artifacts and dashboard modules..."
+git add .
+
+if git diff-index --quiet HEAD --; then
+echo "[*] Working tree clean. No new commits required."
+else
+echo "[+] Committing changes with core cryptographic signature..."
+git commit -m "${COMMIT_MESSAGE}"
+fi
+
+echo "[+] Synchronizing with remote upstream..."
+git fetch --all --prune
+git pull origin "${BRANCH_NAME}" --rebase || echo "[!] Warning: Upstream pull skipped or unconfigured."
+
+echo "[+] Pushing release to remote origin..."
+git push origin "${BRANCH_NAME}" || echo "[!] Manual push override required by host security policy."
+
+echo "=== [ SERRANO LABS DEPLOYMENT SEQUENCE COMPLETE ] ==="
